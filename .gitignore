@@ -1,0 +1,15 @@
+# IDE
+.vscode
+.idea
+
+# JS
+node_modules
+
+# Python
+venv
+
+# Env
+*.env*
+
+# MacOS files
+.DS_Store
