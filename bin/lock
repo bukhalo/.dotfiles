@@ -1,0 +1,15 @@
+#!/bin/sh
+
+# force keyboard backlight to dim
+pkill -USR1 xdimmer
+
+# kill any active tokens
+doas -L
+ssh-add -D
+
+# clear clipboard
+echo -n | xclip -in -selection clipboard
+
+if [ `uname -s` = "OpenBSD" ]; then
+	slock
+fi

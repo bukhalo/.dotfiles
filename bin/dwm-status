@@ -1,0 +1,89 @@
+#!/bin/sh
+
+# Simple dwm status bar for OpenBSD
+# Author:  Maximilian Mayer
+# License: MIT (see LICENSE file)
+# https://raw.githubusercontent.com/MaxMutantMayer/sdsbo/master/sdsbo
+
+# defaults
+LC=                 # label color
+TC=                 # text color
+LBAT1=CHA           # charging label
+LBAT2=BAT           # battery label
+LDATE=DATE          # date label
+FDATE="+%Y-%m-%d"   # date format string
+IPIF=lo0            # IP address interface
+LIPV4=IPv4          # IPv4 label
+LIPV6=IPv6          # IPv6 label
+LTEMP=TEMP          # temperature label
+DTEMP=cpu0          # temperature device
+LTIME=TIME          # time label
+FTIME="+%T"         # time format string
+LVOL1=VOL           # volume 'muted' label
+LVOL2=VOL           # volume label
+
+# modules to use
+mods() {
+	echo "$(mod_temp) $(mod_ipv4) $(mod_ipv6) $(mod_vol) $(mod_bat) $(mod_date) $(mod_time)"
+}
+
+# battery module
+mod_bat () {
+	charging="$(apm -a)"
+	bat_stat="$(apm -l)"
+
+	if [ "$charging" = 1 ]; then
+		printf "%s%s%s %s%%" "$LC" "$LBAT1" "$TC" "$bat_stat"
+	else
+		printf "%s%s%s %s%%" "$LC" "$LBAT2" "$TC" "$bat_stat"
+	fi
+}
+
+# date module
+mod_date () {
+	printf "%s%s%s %s" "$LC" "$LDATE" "$TC" "$(date "$FDATE")"
+}
+
+# IPv4 address module
+mod_ipv4 () {
+	printf "%s%s%s %s" "$LC" "$LIPV4" "$TC" "$(ifconfig $IPIF \
+		| awk '/inet / { print $2; exit }')"
+}
+
+# IPv6 address module
+mod_ipv6 () {
+	# gather IPv6 address and prune '%interface' suffix
+	inet6="$(ifconfig $IPIF | awk '/inet6 / { print $2; exit }')"
+	printf "%s%s%s %s" "$LC" "$LIPV6" "$TC" "${inet6%\%*}"
+}
+
+# temperature module
+mod_temp () {
+	printf "%s%s%s %s" "$LC" "$LTEMP" "$TC" \
+		"$(sysctl -n hw.sensors."$DTEMP".temp0 | sed 's/ deg/°/g')"
+}
+
+# time module
+mod_time() {
+	printf "%s%s%s %s" "$LC" "$LTIME" "$TC" "$(date "$FTIME")"
+}
+
+# volume module
+mod_vol () {
+	mute="$(sndioctl -n output.mute)"
+	level="$(sndioctl -n output.level)"
+
+	if [ "$mute" = "1" ]; then
+		printf "%s%s%s mute" "$LC" "$LVOL1" "$TC"
+	else
+		master="$(sndioctl -n output.level)"
+		printf "%s%s%s %s%%" "$LC" "$LVOL2" "$TC" "$level"
+	fi
+}
+
+# update status bar every second
+while true
+do
+	xsetroot -name "$(mods)"
+	sleep 1
+done
