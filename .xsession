@@ -11,9 +11,14 @@ cleanup() {
 trap cleanup INT TERM QUIT
 
 if [ X`uname -s` = X"Linux" ]; then
-	MACHINE="`cat /sys/devices/virtual/dmi/id/sys_vendor` `cat /sys/devices/virtual/dmi/id/product_name`"
+	ENVIRONMENT="`cat /sys/devices/virtual/dmi/id/sys_vendor` `cat /sys/devices/virtual/dmi/id/product_name`"
 else
-	MACHINE="`sysctl -n hw.vendor` `sysctl -n hw.product`"
+	ENVIRONMENT="`sysctl -n hw.vendor` `sysctl -n hw.product`"
+fi
+
+# Detect custom PC
+if [ "$ENVIRONMENT" == "To Be Filled By O.E.M. To Be Filled By O.E.M." ]; then
+	ENVIRONMENT="`cat /sys/devices/virtual/dmi/id/board_vendor` `cat /sys/devices/virtual/dmi/id/board_name`"
 fi
 
 export LANG=en_US.UTF-8
@@ -67,7 +72,7 @@ WM=dwm
 hsetroot -solid "#a3ccbd"
 picom -b
 
-case $MACHINE in
+case $ENVIRONMENT in
 "HONOR HGE-WX6")
 	xdimmer &
 	# turn off the touchscreen
@@ -75,8 +80,17 @@ case $MACHINE in
 	# touchpad tuning
 	xinput set-prop /dev/wsmouse0 "Device Accel Velocity Scaling" 1
 	;;
+
+"ASRock A320M-HDV R4.0")
+	echo "Xft.dpi: 173" | xrdb -merge
+	# export GDK_DPI_SCALE=1.5
+	export QT_SCALE_FACTOR=1.7
+	export QT_FONT_DPI=96
+	WM=awesome
+	;;
+
 *)
-	echo "running on unknown machine \"${MACHINE}\""
+	echo "running in unknown environment \"${ENVIRONMENT}\""
 	;;
 esac
 
@@ -87,8 +101,12 @@ if [ -f ~/.xsession.local ]; then
 	. ~/.xsession.local
 fi
 
+if [ "$WM" == "dwm" ]; then
+	. ~/bin/dwm-status
+fi
+
 $WM
-. ~/bin/dwm-status
+
 setxkbmap -layout us,ru -option grp:caps_toggle
 
 cleanup
